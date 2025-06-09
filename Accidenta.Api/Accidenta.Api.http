@@ -1,0 +1,6 @@
+@Accidenta.Api_HostAddress = http://localhost:5283
+
+GET {{Accidenta.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
