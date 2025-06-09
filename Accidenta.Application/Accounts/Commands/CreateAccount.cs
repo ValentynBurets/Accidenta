@@ -1,75 +1,70 @@
 ﻿using Accidenta.Application.DTO;
 using Accidenta.Domain.Entities;
 using Accidenta.Domain.Interfaces;
+using FluentValidation;
 using MediatR;
 using Serilog;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using ValidationException = FluentValidation.ValidationException;
 
-namespace Accidenta.Application.Accounts.Commands
+namespace Accidenta.Application.Accounts.Commands;
+
+public class CreateAccount : IRequest<Guid>
 {
-    public class CreateAccount : IRequest<Guid>
+    public CreateAccountRequest Request { get; }
+    public CreateAccount(CreateAccountRequest request) => Request = request;
+}
+
+public class CreateAccountHandler : IRequestHandler<CreateAccount, Guid>
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger _logger;
+    private readonly IValidator<CreateAccountRequest> _validator;
+
+    public CreateAccountHandler(IUnitOfWork unitOfWork, ILogger logger, IValidator<CreateAccountRequest> validator)
     {
-        public CreateAccountRequest Request { get; }
-        public CreateAccount(CreateAccountRequest request) => Request = request;
+        _unitOfWork = unitOfWork;
+        _logger = logger;
+        _validator = validator;
     }
 
-    public class CreateAccountHandler : IRequestHandler<CreateAccount, Guid>
+    public async Task<Guid> Handle(CreateAccount command, CancellationToken cancellationToken)
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger _logger;
-        private readonly ISpecification<CreateAccountRequest> _specification;
+        var req = command.Request;
 
-        public CreateAccountHandler(IUnitOfWork unitOfWork, ILogger logger, ISpecification<CreateAccountRequest> specification)
+        var result = _validator.Validate(req);
+        if (!result.IsValid)
+            throw new ValidationException(result.Errors);
+
+        var existingAccount = await _unitOfWork.Accounts.GetByNameAsync(req.AccountName, cancellationToken);
+        if (existingAccount != null)
         {
-            _unitOfWork = unitOfWork;
-            _logger = logger;
-            _specification = specification;
+            throw new InvalidOperationException("Account with this name already exists");
         }
 
-        public async Task<Guid> Handle(CreateAccount command, CancellationToken cancellationToken)
+        var contact = await _unitOfWork.Contacts.GetByEmailAsync(req.Contact.Email, cancellationToken);
+
+        if (contact == null)
         {
-            var req = command.Request;
-
-            if (!_specification.IsSatisfiedBy(req))
+            contact = new Contact
             {
-                throw new ArgumentException("Invalid account creation request: Contact and account name must be provided with valid data.");
-            }
-
-            var existingAccount = await _unitOfWork.Accounts.GetByNameAsync(req.AccountName, cancellationToken);
-            if (existingAccount != null)
-            {
-                throw new InvalidOperationException("Account with this name already exists.");
-            }
-
-            var contact = await _unitOfWork.Contacts.GetByEmailAsync(req.Contact.Email, cancellationToken);
-
-            if (contact == null)
-            {
-                contact = new Contact
-                {
-                    FirstName = req.Contact.FirstName,
-                    LastName = req.Contact.LastName,
-                    Email = req.Contact.Email
-                };
-
-                await _unitOfWork.Contacts.AddAsync(contact, cancellationToken);
-            }
-
-            var account = new Account
-            {
-                Name = req.AccountName,
-                Contact = contact
+                FirstName = req.Contact.FirstName,
+                LastName = req.Contact.LastName,
+                Email = req.Contact.Email
             };
 
-            await _unitOfWork.Accounts.AddAsync(account, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            _logger.Information("Account created with ID {AccountId}", account.Id);
-            return account.Id;
+            await _unitOfWork.Contacts.AddAsync(contact, cancellationToken);
         }
+
+        var account = new Account
+        {
+            Name = req.AccountName,
+            Contact = contact
+        };
+
+        await _unitOfWork.Accounts.AddAsync(account, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _logger.Information("Account created with ID {AccountId}", account.Id);
+        return account.Id;
     }
 }

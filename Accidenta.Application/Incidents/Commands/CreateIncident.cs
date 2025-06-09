@@ -1,107 +1,103 @@
 ﻿using Accidenta.Application.DTO;
-using Accidenta.Application.Exceptions;
-using Accidenta.Application.Incidents.Specification;
 using Accidenta.Domain.Entities;
 using Accidenta.Domain.Interfaces;
+using FluentValidation;
 using MediatR;
 using Serilog;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Accidenta.Application.Incidents.Commands
+namespace Accidenta.Application.Incidents.Commands;
+
+public class CreateIncident : IRequest<string>
 {
-    public class CreateIncident : IRequest<string>
+    public CreateIncidentRequest Request { get; }
+    public CreateIncident(CreateIncidentRequest request) => Request = request;
+}
+
+public class CreateIncidentHandler : IRequestHandler<CreateIncident, string>
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger _logger;
+    private readonly IValidator<CreateIncidentRequest> _validator;
+
+    public CreateIncidentHandler(IUnitOfWork unitOfWork, ILogger logger, IValidator<CreateIncidentRequest> validator)
     {
-        public CreateIncidentRequest Request { get; }
-        public CreateIncident(CreateIncidentRequest request) => Request = request;
+        _unitOfWork = unitOfWork;
+        _logger = logger;
+        _validator = validator;
     }
 
-    public class CreateIncidentHandler : IRequestHandler<CreateIncident, string>
+    public async Task<string> Handle(CreateIncident command, CancellationToken ct)
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger _logger;
+        var req = command.Request;
 
-        public CreateIncidentHandler(IUnitOfWork unitOfWork, ILogger logger)
+        _logger.Information("Handling CreateIncidentCommand for AccountName: {AccountName}, Email: {Email}", req.AccountName, req.Email);
+
+        var account = await _unitOfWork.Accounts.GetByNameAsync(req.AccountName, ct);
+
+        var validationResult = await _validator.ValidateAsync(req, ct);
+        if (!validationResult.IsValid)
         {
-            _unitOfWork = unitOfWork;
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            var errorMessage = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
+            _logger.Warning("Validation failed: {Errors}", errorMessage);
+            throw new ValidationException(errorMessage);
         }
 
-        public async Task<string> Handle(CreateIncident command, CancellationToken ct)
+        var contact = await GetOrCreateAndLinkContactAsync(account!, req, ct);
+
+        var incident = await CreateIncidentAsync(account!, req.Description, ct);
+
+        _logger.Information("Incident created successfully: {IncidentName}", incident.Id);
+        return incident.Id;
+    }
+
+    private async Task<Contact> GetOrCreateAndLinkContactAsync(Account account, CreateIncidentRequest req, CancellationToken ct)
+    {
+        var contact = await _unitOfWork.Contacts.GetByEmailAsync(req.Email, ct);
+
+        if (contact == null)
         {
-            var req = command.Request;
-
-            _logger.Information("Handling CreateIncidentCommand for AccountName: {AccountName}, Email: {Email}", req.AccountName, req.Email);
-
-            var account = await _unitOfWork.Accounts.GetByNameAsync(req.AccountName, ct);
-
-            var accountSpec = new AccountExistsSpecification();
-            if (!accountSpec.IsSatisfiedBy(account))
+            contact = new Contact
             {
-                _logger.Warning(accountSpec.ErrorMessage);
-                throw new NotFoundException(accountSpec.ErrorMessage);
-            }
-
-            var contact = await GetOrCreateAndLinkContactAsync(account!, req, ct);
-
-            var incident = await CreateIncidentAsync(account!, req.Description, ct);
-
-            _logger.Information("Incident created successfully: {IncidentName}", incident.IncidentName);
-            return incident.IncidentName;
-        }
-
-        private async Task<Contact> GetOrCreateAndLinkContactAsync(Account account, CreateIncidentRequest req, CancellationToken ct)
-        {
-            var contact = await _unitOfWork.Contacts.GetByEmailAsync(req.Email, ct);
-
-            if (contact == null)
-            {
-                contact = new Contact
-                {
-                    FirstName = req.FirstName,
-                    LastName = req.LastName,
-                    Email = req.Email
-                };
-
-                await _unitOfWork.Contacts.AddAsync(contact, ct);
-                _logger.Information("Created new contact: {Email}", contact.Email);
-            }
-            else
-            {
-                contact.FirstName = req.FirstName;
-                contact.LastName = req.LastName;
-                _logger.Information("Updated existing contact: {Email}", contact.Email);
-            }
-
-            LinkContactToAccountIfNeeded(account, contact);
-
-            return contact;
-        }
-
-        private void LinkContactToAccountIfNeeded(Account account, Contact contact)
-        {
-            if (account.ContactId != contact.Id)
-            {
-                account.Contact = contact;
-                _logger.Information("Linked contact {ContactId} to account {AccountName}", contact.Id, account.Name);
-            }
-        }
-
-        private async Task<Incident> CreateIncidentAsync(Account account, string description, CancellationToken ct)
-        {
-            var incident = new Incident
-            {
-                Account = account,
-                Description = description
+                FirstName = req.FirstName,
+                LastName = req.LastName,
+                Email = req.Email
             };
 
-            await _unitOfWork.Incidents.AddAsync(incident, ct);
-            await _unitOfWork.SaveChangesAsync(ct);
-
-            return incident;
+            await _unitOfWork.Contacts.AddAsync(contact, ct);
+            _logger.Information("Created new contact: {Email}", contact.Email);
         }
+        else
+        {
+            contact.FirstName = req.FirstName;
+            contact.LastName = req.LastName;
+            _logger.Information("Updated existing contact: {Email}", contact.Email);
+        }
+
+        LinkContactToAccountIfNeeded(account, contact);
+
+        return contact;
+    }
+
+    private void LinkContactToAccountIfNeeded(Account account, Contact contact)
+    {
+        if (account.ContactId != contact.Id)
+        {
+            account.Contact = contact;
+            _logger.Information("Linked contact {ContactId} to account {AccountName}", contact.Id, account.Name);
+        }
+    }
+
+    private async Task<Incident> CreateIncidentAsync(Account account, string description, CancellationToken ct)
+    {
+        var incident = new Incident
+        {
+            Account = account,
+            Description = description
+        };
+
+        await _unitOfWork.Incidents.AddAsync(incident, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return incident;
     }
 }

@@ -26,13 +26,13 @@ Accidenta is a modular, event-driven incident management system designed for eff
 
 ## 🧰 Tech Stack
 
-- **.NET 7**, **C#**
+- **.NET 9**, **C#**
 - **ASP.NET Core Web API**
 - **Entity Framework Core** (SQL Server)
 - **MediatR** (CQRS implementation)
 - **Serilog** (logging)
 - **Clean Architecture**
-- **Specification Pattern**
+- **Validation Pattern**
 - **Repository & Unit of Work Patterns**
 
 

@@ -1,29 +1,39 @@
-﻿using Accidenta.Application.Incidents.DTO;
+﻿using Accidenta.Application.Common.DTO;
+using Accidenta.Application.Incidents.DTO;
 using Accidenta.Domain.Interfaces;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
-namespace Accidenta.Application.Incidents.Queries
+namespace Accidenta.Application.Incidents.Queries;
+
+public record GetAllIncidentsQuery(int Page = 1, int PageSize = 20)
+    : IRequest<PagedResult<IncidentDto>>;
+
+public class GetAllIncidentsQueryHandler : IRequestHandler<GetAllIncidentsQuery, PagedResult<IncidentDto>>
 {
-    public record GetAllIncidentsQuery() : IRequest<IEnumerable<IncidentDto>>;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public class GetAllIncidentsQueryHandler : IRequestHandler<GetAllIncidentsQuery, IEnumerable<IncidentDto>>
+    public GetAllIncidentsQueryHandler(IUnitOfWork unitOfWork)
     {
-        private readonly IUnitOfWork _unitOfWork;
+        _unitOfWork = unitOfWork;
+    }
 
-        public GetAllIncidentsQueryHandler(IUnitOfWork unitOfWork)
-        {
-            _unitOfWork = unitOfWork;
-        }
+    public async Task<PagedResult<IncidentDto>> Handle(GetAllIncidentsQuery request, CancellationToken ct)
+    {
+        var query = _unitOfWork.Incidents.AsQueryable();
 
-        public async Task<IEnumerable<IncidentDto>> Handle(GetAllIncidentsQuery request, CancellationToken ct)
+        var totalCount = await query.CountAsync(ct);
+        var items = await query
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
+            .ToListAsync(ct);
+
+        return new PagedResult<IncidentDto>
         {
-            var incidents = await _unitOfWork.Incidents.GetAllAsync(ct);
-            return incidents.Select(i => new IncidentDto(i));
-        }
+            Items = items.Select(i => new IncidentDto(i)),
+            TotalCount = totalCount,
+            Page = request.Page,
+            PageSize = request.PageSize
+        };
     }
 }

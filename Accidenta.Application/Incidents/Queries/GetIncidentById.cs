@@ -2,32 +2,26 @@
 using Accidenta.Application.Incidents.DTO;
 using Accidenta.Domain.Interfaces;
 using MediatR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Accidenta.Application.Incidents.Queries
+namespace Accidenta.Application.Incidents.Queries;
+
+public record GetIncidentByIdQuery(Guid Id) : IRequest<IncidentDto>;
+
+public class GetIncidentByIdQueryHandler : IRequestHandler<GetIncidentByIdQuery, IncidentDto>
 {
-    public record GetIncidentByIdQuery(Guid Id) : IRequest<IncidentDto>;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public class GetIncidentByIdQueryHandler : IRequestHandler<GetIncidentByIdQuery, IncidentDto>
+    public GetIncidentByIdQueryHandler(IUnitOfWork unitOfWork)
     {
-        private readonly IUnitOfWork _unitOfWork;
+        _unitOfWork = unitOfWork;
+    }
 
-        public GetIncidentByIdQueryHandler(IUnitOfWork unitOfWork)
-        {
-            _unitOfWork = unitOfWork;
-        }
+    public async Task<IncidentDto> Handle(GetIncidentByIdQuery request, CancellationToken ct)
+    {
+        var incident = await _unitOfWork.Incidents.GetByIdAsync(request.Id, ct);
+        if (incident is null)
+            throw new NotFoundException("Incident not found");
 
-        public async Task<IncidentDto> Handle(GetIncidentByIdQuery request, CancellationToken ct)
-        {
-            var incident = await _unitOfWork.Incidents.GetByIdAsync(request.Id, ct);
-            if (incident is null)
-                throw new NotFoundException("Incident not found.");
-
-            return new IncidentDto(incident);
-        }
+        return new IncidentDto(incident);
     }
 }

@@ -7,14 +7,9 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 using Serilog.Events;
 
-var configuration = new ConfigurationBuilder()
-    .SetBasePath(AppContext.BaseDirectory)
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .Build();
-
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddServices(configuration);
+builder.Services.AddServices(builder.Configuration);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -53,9 +48,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-
 app.UseHttpsRedirection();
+
 app.MapControllers();
+
 app.MapGet("/", context =>
 {
     context.Response.Redirect("/swagger");
@@ -64,12 +60,12 @@ app.MapGet("/", context =>
 
 try
 {
-    Log.Information("Starting up the application...");
+    Log.Information("Starting up the application");
     app.Run();
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Application startup failed.");
+    Log.Fatal(ex, "Application startup failed");
 }
 finally
 {

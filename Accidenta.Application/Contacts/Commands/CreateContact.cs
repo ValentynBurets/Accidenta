@@ -3,54 +3,48 @@ using Accidenta.Domain.Entities;
 using Accidenta.Domain.Interfaces;
 using MediatR;
 using Serilog;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Accidenta.Application.Contacts.Commands
+namespace Accidenta.Application.Contacts.Commands;
+
+public class CreateContact : IRequest<Guid>
 {
-    public class CreateContact : IRequest<Guid>
+    public CreateContactRequest Request { get; }
+    public CreateContact(CreateContactRequest request) => Request = request;
+}
+
+public class CreateContactHandler : IRequestHandler<CreateContact, Guid>
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger _logger;
+
+    public CreateContactHandler(IUnitOfWork unitOfWork, ILogger logger)
     {
-        public CreateContactRequest Request { get; }
-        public CreateContact(CreateContactRequest request) => Request = request;
+        _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
-    public class CreateContactHandler : IRequestHandler<CreateContact, Guid>
+    public async Task<Guid> Handle(CreateContact command, CancellationToken cancellationToken)
     {
-        private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger _logger;
+        var req = command.Request;
+        var existing = await _unitOfWork.Contacts.GetByEmailAsync(req.Email, cancellationToken);
 
-        public CreateContactHandler(IUnitOfWork unitOfWork, ILogger logger)
+        if (existing != null)
         {
-            _unitOfWork = unitOfWork;
-            _logger = logger;
+            throw new InvalidOperationException("Contact with the given email already exists");
         }
 
-        public async Task<Guid> Handle(CreateContact command, CancellationToken cancellationToken)
+        var contact = new Contact
         {
-            var req = command.Request;
-            var existing = await _unitOfWork.Contacts.GetByEmailAsync(req.Email, cancellationToken);
+            FirstName = req.FirstName,
+            LastName = req.LastName,
+            Email = req.Email
+        };
 
-            if (existing != null)
-            {
-                throw new InvalidOperationException("Contact with the given email already exists.");
-            }
+        await _unitOfWork.Contacts.AddAsync(contact, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            var contact = new Contact
-            {
-                FirstName = req.FirstName,
-                LastName = req.LastName,
-                Email = req.Email
-            };
+        _logger.Information("Contact created with ID {ContactId}", contact.Id);
 
-            await _unitOfWork.Contacts.AddAsync(contact, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            _logger.Information("Contact created with ID {ContactId}", contact.Id);
-
-            return contact.Id;
-        }
+        return contact.Id;
     }
 }

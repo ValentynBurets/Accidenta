@@ -1,13 +1,10 @@
-﻿using Accidenta.Application.Contacts.Commands;
+﻿using Accidenta.Application.Common.DTO;
+using Accidenta.Application.Contacts.Commands;
 using Accidenta.Application.Contacts.DTO;
 using Accidenta.Application.Contacts.Queries;
 using Accidenta.Application.DTO;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Serilog;
-using ILogger = Serilog.ILogger;
-
-namespace Accidenta.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -24,19 +21,11 @@ public class ContactsController : ControllerBase
 
     [HttpPost]
     [ProducesResponseType(typeof(object), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateContactRequest request)
     {
-        try
-        {
-            var id = await _mediator.Send(new CreateContact(request));
-            return CreatedAtAction(nameof(GetById), new { id }, new { ContactId = id });
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Error creating contact.");
-            return StatusCode(500, "Internal server error.");
-        }
+        var id = await _mediator.Send(new CreateContact(request));
+        return CreatedAtAction(nameof(GetById), new { id }, new { ContactId = id });
     }
 
     [HttpGet("id/{id:guid}")]
@@ -45,26 +34,27 @@ public class ContactsController : ControllerBase
     public async Task<IActionResult> GetById([FromRoute] Guid id)
     {
         var contact = await _mediator.Send(new GetContactByIdQuery(id));
-        return contact == null ? NotFound() : Ok(contact);
+        return Ok(contact);
     }
 
     [HttpGet("email")]
     [ProducesResponseType(typeof(ContactDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByEmail([FromQuery] string email)
     {
         if (string.IsNullOrWhiteSpace(email))
             return BadRequest("Email is required.");
 
-        var result = await _mediator.Send(new GetContactByEmailQuery(email));
-        return result == null ? NotFound() : Ok(result);
+        var contact = await _mediator.Send(new GetContactByEmailQuery(email));
+        return Ok(contact);
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<ContactDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll()
+    [ProducesResponseType(typeof(PagedResult<ContactDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var result = await _mediator.Send(new GetAllContactsQuery());
+        var result = await _mediator.Send(new GetAllContactsQuery(page, pageSize));
         return Ok(result);
     }
 }

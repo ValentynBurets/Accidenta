@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace Accidenta.Infrastructure.Options;
 
-namespace Accidenta.Infrastructure.Options
+public class DatabaseSettings
 {
-    public class DatabaseSettings
-    {
-        public string ConnectionString { get; set; } = null!;
-    }
+    public string ConnectionString { get; set; } = null!;
 }

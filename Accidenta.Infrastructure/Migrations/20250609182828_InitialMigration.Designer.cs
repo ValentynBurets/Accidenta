@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Accidenta.Infrastructure.Migrations
 {
     [DbContext(typeof(AccidentaDbContext))]
-    [Migration("20250609111324_InitialMigration")]
+    [Migration("20250609182828_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -76,18 +76,13 @@ namespace Accidenta.Infrastructure.Migrations
 
             modelBuilder.Entity("Accidenta.Domain.Entities.Incident", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<Guid>("AccountId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("IncidentName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 

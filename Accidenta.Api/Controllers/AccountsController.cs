@@ -1,12 +1,9 @@
 ﻿using Accidenta.Application.Accounts.Commands;
+using Accidenta.Application.Accounts.DTO;
 using Accidenta.Application.Accounts.Queries;
 using Accidenta.Application.DTO;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Serilog;
-using ILogger = Serilog.ILogger;
-
-namespace Accidenta.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -22,28 +19,25 @@ public class AccountsController : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType(typeof(object), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateAccountRequest request)
     {
-        try
-        {
-            var id = await _mediator.Send(new CreateAccount(request));
-            return CreatedAtAction(nameof(GetById), new { id }, new { AccountId = id });
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "Error creating account.");
-            return StatusCode(500, "Internal server error.");
-        }
+        var id = await _mediator.Send(new CreateAccount(request));
+        return CreatedAtAction(nameof(GetById), new { id }, new { AccountId = id });
     }
 
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(AccountDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id)
     {
         var account = await _mediator.Send(new GetAccountByIdQuery(id));
-        return account == null ? NotFound() : Ok(account);
+        return Ok(account);
     }
 
     [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<AccountDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll()
     {
         var result = await _mediator.Send(new GetAllAccountsQuery());

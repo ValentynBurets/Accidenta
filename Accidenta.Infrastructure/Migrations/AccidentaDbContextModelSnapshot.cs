@@ -73,18 +73,13 @@ namespace Accidenta.Infrastructure.Migrations
 
             modelBuilder.Entity("Accidenta.Domain.Entities.Incident", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<Guid>("AccountId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("IncidentName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
