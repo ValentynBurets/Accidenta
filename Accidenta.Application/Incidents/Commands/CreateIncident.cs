@@ -1,4 +1,5 @@
 ﻿using Accidenta.Application.DTO;
+using Accidenta.Application.Exceptions;
 using Accidenta.Domain.Entities;
 using Accidenta.Domain.Interfaces;
 using FluentValidation;
@@ -7,13 +8,13 @@ using Serilog;
 
 namespace Accidenta.Application.Incidents.Commands;
 
-public class CreateIncident : IRequest<string>
+public class CreateIncident : IRequest<Guid>
 {
     public CreateIncidentRequest Request { get; }
     public CreateIncident(CreateIncidentRequest request) => Request = request;
 }
 
-public class CreateIncidentHandler : IRequestHandler<CreateIncident, string>
+public class CreateIncidentHandler : IRequestHandler<CreateIncident, Guid>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger _logger;
@@ -26,13 +27,20 @@ public class CreateIncidentHandler : IRequestHandler<CreateIncident, string>
         _validator = validator;
     }
 
-    public async Task<string> Handle(CreateIncident command, CancellationToken ct)
+    public async Task<Guid> Handle(CreateIncident command, CancellationToken ct)
     {
         var req = command.Request;
 
         _logger.Information("Handling CreateIncidentCommand for AccountName: {AccountName}, Email: {Email}", req.AccountName, req.Email);
 
         var account = await _unitOfWork.Accounts.GetByNameAsync(req.AccountName, ct);
+
+        if (account == null)
+        {
+            var msg = $"Account with name '{req.AccountName}' was not found.";
+            _logger.Warning(msg);
+            throw new NotFoundException(msg);
+        }
 
         var validationResult = await _validator.ValidateAsync(req, ct);
         if (!validationResult.IsValid)
@@ -42,11 +50,10 @@ public class CreateIncidentHandler : IRequestHandler<CreateIncident, string>
             throw new ValidationException(errorMessage);
         }
 
-        var contact = await GetOrCreateAndLinkContactAsync(account!, req, ct);
+        var contact = await GetOrCreateAndLinkContactAsync(account, req, ct);
+        var incident = await CreateIncidentAsync(account, req.Description, ct);
 
-        var incident = await CreateIncidentAsync(account!, req.Description, ct);
-
-        _logger.Information("Incident created successfully: {IncidentName}", incident.Id);
+        _logger.Information("Incident created successfully: {IncidentId}", incident.Id);
         return incident.Id;
     }
 

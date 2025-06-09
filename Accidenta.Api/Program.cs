@@ -9,9 +9,19 @@ using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
+
+builder.Host.UseSerilog();
+
+builder.Services.AddSingleton(Log.Logger);
 builder.Services.AddServices(builder.Configuration);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
@@ -21,25 +31,18 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-builder.Host.UseSerilog((hostContext, services, loggerConfig) =>
-{
-    var serilogSettings = services.GetService<IOptionsMonitor<SerilogSettings>>();
-    if (serilogSettings is null)
-    {
-        loggerConfig.WriteTo.Console();
-        return;
-    }
-
-    var configurator = new SerilogConfigurator(serilogSettings);
-    var config = configurator.Configure();
-
-    loggerConfig
-        .MinimumLevel.Is(LogEventLevel.Information)
-        .Enrich.FromLogContext()
-        .WriteTo.Sink(config.CreateLogger());
-});
-
 var app = builder.Build();
+
+var serilogSettings = app.Services.GetService<IOptionsMonitor<SerilogSettings>>();
+if (serilogSettings is not null)
+{
+    Log.Logger = new SerilogConfigurator(serilogSettings).Configure().CreateLogger();
+    Log.Information("Serilog configured with custom settings.");
+}
+else
+{
+    Log.Warning("SerilogSettings not available. Using fallback logger.");
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -49,7 +52,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
-
 app.MapControllers();
 
 app.MapGet("/", context =>

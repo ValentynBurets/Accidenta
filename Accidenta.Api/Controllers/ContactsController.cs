@@ -11,9 +11,9 @@ using Microsoft.AspNetCore.Mvc;
 public class ContactsController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly ILogger _logger;
+    private readonly ILogger<AccountsController> _logger;
 
-    public ContactsController(IMediator mediator, ILogger logger)
+    public ContactsController(IMediator mediator, ILogger<AccountsController> logger)
     {
         _mediator = mediator;
         _logger = logger;

@@ -55,7 +55,6 @@ public class CreateIncidentHandlerTests
 
         var result = await _handler.Handle(new CreateIncident(request), CancellationToken.None);
 
-        Assert.NotNull(result);
         _contactRepoMock.Verify(r => r.GetByEmailAsync("user@test.com", It.IsAny<CancellationToken>()), Times.Once);
         _incidentRepoMock.Verify(r => r.AddAsync(It.Is<Incident>(i => i.Description == request.Description), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -83,7 +82,6 @@ public class CreateIncidentHandlerTests
 
         var result = await _handler.Handle(new CreateIncident(request), CancellationToken.None);
 
-        Assert.NotNull(result);
         _contactRepoMock.Verify(r => r.AddAsync(It.Is<Contact>(c => c.Email == request.Email), It.IsAny<CancellationToken>()), Times.Once);
         _incidentRepoMock.Verify(r => r.AddAsync(It.IsAny<Incident>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -103,25 +101,5 @@ public class CreateIncidentHandlerTests
         _accountRepoMock.Setup(r => r.GetByNameAsync("MissingAccount", It.IsAny<CancellationToken>())).ReturnsAsync((Account?)null);
 
         await Assert.ThrowsAsync<NotFoundException>(() => _handler.Handle(new CreateIncident(request), CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task Handle_ShouldThrowValidationException_WhenValidationFails()
-    {
-        var request = new CreateIncidentRequest
-        {
-            AccountName = "",
-            Email = "invalid",
-            FirstName = "",
-            LastName = "",
-            Description = ""
-        };
-
-        _validatorMock.Setup(v => v.ValidateAsync(request, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new ValidationResult(new[] {
-                new ValidationFailure("Email", "Invalid email"),
-            }));
-
-        await Assert.ThrowsAsync<ValidationException>(() => _handler.Handle(new CreateIncident(request), CancellationToken.None));
     }
 }

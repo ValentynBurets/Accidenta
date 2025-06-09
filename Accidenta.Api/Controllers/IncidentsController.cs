@@ -11,16 +11,16 @@ using Microsoft.AspNetCore.Mvc;
 public class IncidentsController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly ILogger _logger;
+    private readonly ILogger<AccountsController> _logger;
 
-    public IncidentsController(IMediator mediator, ILogger logger)
+    public IncidentsController(IMediator mediator, ILogger<AccountsController> logger)
     {
         _mediator = mediator;
         _logger = logger;
     }
 
     [HttpPost]
-    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Create([FromBody] CreateIncidentRequest request)

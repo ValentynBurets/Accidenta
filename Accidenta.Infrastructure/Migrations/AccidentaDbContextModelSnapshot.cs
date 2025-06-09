@@ -73,8 +73,9 @@ namespace Accidenta.Infrastructure.Migrations
 
             modelBuilder.Entity("Accidenta.Domain.Entities.Incident", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("AccountId")
                         .HasColumnType("uniqueidentifier");

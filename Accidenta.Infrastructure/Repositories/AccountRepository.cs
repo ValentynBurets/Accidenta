@@ -18,4 +18,9 @@ public class AccountRepository : GenericRepository<Account>, IAccountRepository
         await _ctx.Accounts
                   .Include(a => a.Contact)
                   .FirstOrDefaultAsync(a => a.Name == name, ct);
+
+    public async new Task<Account?> GetByIdAsync(Guid id, CancellationToken ct) =>
+         await _ctx.Accounts
+                  .Include(a => a.Contact)
+                  .FirstOrDefaultAsync(a => a.Id == id, ct);
 }

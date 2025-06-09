@@ -28,8 +28,11 @@ public class ExceptionHandlingMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled exception");
+
+            var message = ex.Message ?? ex.InnerException?.Message;
+
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await context.Response.WriteAsJsonAsync(new { error = "An unexpected error occurred." });
+            await context.Response.WriteAsJsonAsync(new { error = message });
         }
     }
 }

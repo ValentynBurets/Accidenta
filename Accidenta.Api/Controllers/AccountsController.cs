@@ -1,6 +1,7 @@
 ﻿using Accidenta.Application.Accounts.Commands;
 using Accidenta.Application.Accounts.DTO;
 using Accidenta.Application.Accounts.Queries;
+using Accidenta.Application.Common.DTO;
 using Accidenta.Application.DTO;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -10,9 +11,9 @@ using Microsoft.AspNetCore.Mvc;
 public class AccountsController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly ILogger _logger;
+    private readonly ILogger<AccountsController> _logger;
 
-    public AccountsController(IMediator mediator, ILogger logger)
+    public AccountsController(IMediator mediator, ILogger<AccountsController> logger)
     {
         _mediator = mediator;
         _logger = logger;
@@ -37,10 +38,10 @@ public class AccountsController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<AccountDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll()
+    [ProducesResponseType(typeof(PagedResult<AccountDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var result = await _mediator.Send(new GetAllAccountsQuery());
+        var result = await _mediator.Send(new GetAllAccountsQuery(page, pageSize));
         return Ok(result);
     }
 }
