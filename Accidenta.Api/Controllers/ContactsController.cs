@@ -1,21 +1,26 @@
 ﻿using Accidenta.Application.Common.DTO;
+using Accidenta.Application.Common.Mediator;
 using Accidenta.Application.Contacts.Commands;
 using Accidenta.Application.Contacts.DTO;
 using Accidenta.Application.Contacts.Queries;
 using Accidenta.Application.DTO;
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/[controller]")]
 public class ContactsController : ControllerBase
 {
-    private readonly IMediator _mediator;
-    private readonly ILogger<AccountsController> _logger;
+    private readonly ICommandDispatcher _commandDispatcher;
+    private readonly IQueryDispatcher _queryDispatcher;
+    private readonly ILogger<ContactsController> _logger;
 
-    public ContactsController(IMediator mediator, ILogger<AccountsController> logger)
+    public ContactsController(
+        ICommandDispatcher commandDispatcher,
+        IQueryDispatcher queryDispatcher,
+        ILogger<ContactsController> logger)
     {
-        _mediator = mediator;
+        _commandDispatcher = commandDispatcher;
+        _queryDispatcher = queryDispatcher;
         _logger = logger;
     }
 
@@ -24,7 +29,10 @@ public class ContactsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateContactRequest request)
     {
-        var id = await _mediator.Send(new CreateContact(request));
+        var id = await _commandDispatcher.Dispatch<CreateContactCommand, Guid>(
+            new CreateContactCommand(request),
+            HttpContext.RequestAborted);
+
         return CreatedAtAction(nameof(GetById), new { id }, new { ContactId = id });
     }
 
@@ -33,7 +41,10 @@ public class ContactsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById([FromRoute] Guid id)
     {
-        var contact = await _mediator.Send(new GetContactByIdQuery(id));
+        var contact = await _queryDispatcher.Dispatch<GetContactByIdQuery, ContactDto>(
+            new GetContactByIdQuery(id),
+            HttpContext.RequestAborted);
+
         return Ok(contact);
     }
 
@@ -46,7 +57,10 @@ public class ContactsController : ControllerBase
         if (string.IsNullOrWhiteSpace(email))
             return BadRequest("Email is required.");
 
-        var contact = await _mediator.Send(new GetContactByEmailQuery(email));
+        var contact = await _queryDispatcher.Dispatch<GetContactByEmailQuery, ContactDto>(
+            new GetContactByEmailQuery(email),
+            HttpContext.RequestAborted);
+
         return Ok(contact);
     }
 
@@ -54,7 +68,10 @@ public class ContactsController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<ContactDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var result = await _mediator.Send(new GetAllContactsQuery(page, pageSize));
+        var result = await _queryDispatcher.Dispatch<GetAllContactsQuery, PagedResult<ContactDto>>(
+            new GetAllContactsQuery(page, pageSize),
+            HttpContext.RequestAborted);
+
         return Ok(result);
     }
 }

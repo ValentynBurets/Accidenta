@@ -1,20 +1,16 @@
-﻿using Accidenta.Application.DTO;
+﻿using Accidenta.Application.Common.Mediator;
+using Accidenta.Application.DTO;
 using Accidenta.Domain.Entities;
 using Accidenta.Domain.Interfaces;
 using FluentValidation;
-using MediatR;
 using Serilog;
 using ValidationException = FluentValidation.ValidationException;
 
 namespace Accidenta.Application.Accounts.Commands;
 
-public class CreateAccount : IRequest<Guid>
-{
-    public CreateAccountRequest Request { get; }
-    public CreateAccount(CreateAccountRequest request) => Request = request;
-}
+public record CreateAccountCommand(CreateAccountRequest request);
 
-public class CreateAccountHandler : IRequestHandler<CreateAccount, Guid>
+public class CreateAccountHandler : ICommandHandler<CreateAccountCommand, Guid>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger _logger;
@@ -27,9 +23,9 @@ public class CreateAccountHandler : IRequestHandler<CreateAccount, Guid>
         _validator = validator;
     }
 
-    public async Task<Guid> Handle(CreateAccount command, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(CreateAccountCommand command, CancellationToken cancellationToken)
     {
-        var req = command.Request;
+        var req = command.request;
 
         var result = _validator.Validate(req);
         if (!result.IsValid)

@@ -1,14 +1,14 @@
 ﻿using Accidenta.Application.Accounts.DTO;
 using Accidenta.Application.Common.DTO;
+using Accidenta.Application.Common.Mediator;
 using Accidenta.Domain.Interfaces;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Accidenta.Application.Accounts.Queries;
 
-public record GetAllAccountsQuery(int Page = 1, int PageSize = 10) : IRequest<PagedResult<AccountDto>>;
+public record GetAllAccountsQuery(int Page = 1, int PageSize = 10);
 
-public class GetAllAccountsQueryHandler : IRequestHandler<GetAllAccountsQuery, PagedResult<AccountDto>>
+public class GetAllAccountsQueryHandler : IQueryHandler<GetAllAccountsQuery, PagedResult<AccountDto>>
 {
     private readonly IUnitOfWork _unitOfWork;
 

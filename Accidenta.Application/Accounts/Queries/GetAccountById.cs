@@ -1,13 +1,13 @@
 ﻿using Accidenta.Application.Accounts.DTO;
+using Accidenta.Application.Common.Mediator;
 using Accidenta.Application.Exceptions;
 using Accidenta.Domain.Interfaces;
-using MediatR;
 
 namespace Accidenta.Application.Accounts.Queries;
 
-public record GetAccountByIdQuery(Guid Id) : IRequest<AccountDto>;
+public record GetAccountByIdQuery(Guid Id);
 
-public class GetAccountByIdQueryHandler : IRequestHandler<GetAccountByIdQuery, AccountDto>
+public class GetAccountByIdQueryHandler : IQueryHandler<GetAccountByIdQuery, AccountDto>
 {
     private readonly IUnitOfWork _unitOfWork;
 
@@ -16,9 +16,9 @@ public class GetAccountByIdQueryHandler : IRequestHandler<GetAccountByIdQuery, A
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<AccountDto> Handle(GetAccountByIdQuery request, CancellationToken ct)
+    public async Task<AccountDto> Handle(GetAccountByIdQuery query, CancellationToken ct)
     {
-        var account = await _unitOfWork.Accounts.GetByIdAsync(request.Id, ct);
+        var account = await _unitOfWork.Accounts.GetByIdAsync(query.Id, ct);
         if (account is null)
             throw new NotFoundException("Account not found");
 

@@ -1,15 +1,14 @@
 ﻿using Accidenta.Application.Common.DTO;
+using Accidenta.Application.Common.Mediator;
 using Accidenta.Application.Incidents.DTO;
 using Accidenta.Domain.Interfaces;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Accidenta.Application.Incidents.Queries;
 
-public record GetAllIncidentsQuery(int Page = 1, int PageSize = 20)
-    : IRequest<PagedResult<IncidentDto>>;
+public record GetAllIncidentsQuery(int Page = 1, int PageSize = 20);
 
-public class GetAllIncidentsQueryHandler : IRequestHandler<GetAllIncidentsQuery, PagedResult<IncidentDto>>
+public class GetAllIncidentsQueryHandler : IQueryHandler<GetAllIncidentsQuery, PagedResult<IncidentDto>>
 {
     private readonly IUnitOfWork _unitOfWork;
 

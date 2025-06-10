@@ -1,22 +1,23 @@
-﻿using Accidenta.Domain.Entities;
+﻿using Accidenta.Application.Accounts.DTO;
+using Accidenta.Application.Common.Mediator;
+using Accidenta.Application.Exceptions;
 using Accidenta.Domain.Interfaces;
-using MediatR;
 
 namespace Accidenta.Application.Accounts.Queries;
 
-public class GetAccountByNameQuery : IRequest<Account?>
-{
-    public string Name { get; }
-    public GetAccountByNameQuery(string name) => Name = name;
-}
+public record GetAccountByNameQuery(string Name);
 
-public class GetAccountByNameHandler : IRequestHandler<GetAccountByNameQuery, Account?>
+public class GetAccountByNameQueryHandler : IQueryHandler<GetAccountByNameQuery, AccountDto>
 {
     private readonly IUnitOfWork _unitOfWork;
-    public GetAccountByNameHandler(IUnitOfWork unitOfWork) => _unitOfWork = unitOfWork;
+    public GetAccountByNameQueryHandler(IUnitOfWork unitOfWork) => _unitOfWork = unitOfWork;
 
-    public Task<Account?> Handle(GetAccountByNameQuery request, CancellationToken cancellationToken)
+    public async Task<AccountDto> Handle(GetAccountByNameQuery request, CancellationToken cancellationToken)
     {
-        return _unitOfWork.Accounts.GetByNameAsync(request.Name, cancellationToken);
+        var account = await _unitOfWork.Accounts.GetByNameAsync(request.Name, cancellationToken);
+        if (account is null)
+            throw new NotFoundException("Account not found");
+
+        return new AccountDto(account);
     }
 }

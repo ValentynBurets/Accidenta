@@ -1,18 +1,14 @@
-﻿using Accidenta.Application.DTO;
+﻿using Accidenta.Application.Common.Mediator;
+using Accidenta.Application.DTO;
 using Accidenta.Domain.Entities;
 using Accidenta.Domain.Interfaces;
-using MediatR;
 using Serilog;
 
 namespace Accidenta.Application.Contacts.Commands;
 
-public class CreateContact : IRequest<Guid>
-{
-    public CreateContactRequest Request { get; }
-    public CreateContact(CreateContactRequest request) => Request = request;
-}
+public record CreateContactCommand(CreateContactRequest request);
 
-public class CreateContactHandler : IRequestHandler<CreateContact, Guid>
+public class CreateContactHandler : ICommandHandler<CreateContactCommand, Guid>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger _logger;
@@ -23,9 +19,9 @@ public class CreateContactHandler : IRequestHandler<CreateContact, Guid>
         _logger = logger;
     }
 
-    public async Task<Guid> Handle(CreateContact command, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(CreateContactCommand command, CancellationToken cancellationToken)
     {
-        var req = command.Request;
+        var req = command.request;
         var existing = await _unitOfWork.Contacts.GetByEmailAsync(req.Email, cancellationToken);
 
         if (existing != null)

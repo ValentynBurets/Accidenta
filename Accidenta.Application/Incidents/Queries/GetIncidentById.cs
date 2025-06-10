@@ -1,13 +1,13 @@
-﻿using Accidenta.Application.Exceptions;
+﻿using Accidenta.Application.Common.Mediator;
+using Accidenta.Application.Exceptions;
 using Accidenta.Application.Incidents.DTO;
 using Accidenta.Domain.Interfaces;
-using MediatR;
 
 namespace Accidenta.Application.Incidents.Queries;
 
-public record GetIncidentByIdQuery(Guid Id) : IRequest<IncidentDto>;
+public record GetIncidentByIdQuery(Guid Id);
 
-public class GetIncidentByIdQueryHandler : IRequestHandler<GetIncidentByIdQuery, IncidentDto>
+public class GetIncidentByIdQueryHandler : IQueryHandler<GetIncidentByIdQuery, IncidentDto>
 {
     private readonly IUnitOfWork _unitOfWork;
 

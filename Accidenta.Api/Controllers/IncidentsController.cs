@@ -1,21 +1,26 @@
 ﻿using Accidenta.Application.Common.DTO;
+using Accidenta.Application.Common.Mediator;
 using Accidenta.Application.DTO;
 using Accidenta.Application.Incidents.Commands;
 using Accidenta.Application.Incidents.DTO;
 using Accidenta.Application.Incidents.Queries;
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/[controller]")]
 public class IncidentsController : ControllerBase
 {
-    private readonly IMediator _mediator;
-    private readonly ILogger<AccountsController> _logger;
+    private readonly ICommandDispatcher _commandDispatcher;
+    private readonly IQueryDispatcher _queryDispatcher;
+    private readonly ILogger<IncidentsController> _logger;
 
-    public IncidentsController(IMediator mediator, ILogger<AccountsController> logger)
+    public IncidentsController(
+        ICommandDispatcher commandDispatcher,
+        IQueryDispatcher queryDispatcher,
+        ILogger<IncidentsController> logger)
     {
-        _mediator = mediator;
+        _commandDispatcher = commandDispatcher;
+        _queryDispatcher = queryDispatcher;
         _logger = logger;
     }
 
@@ -25,7 +30,10 @@ public class IncidentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Create([FromBody] CreateIncidentRequest request)
     {
-        var id = await _mediator.Send(new CreateIncident(request));
+        var id = await _commandDispatcher.Dispatch<CreateIncidentCommand, Guid>(
+            new CreateIncidentCommand(request),
+            HttpContext.RequestAborted);
+
         return Ok(new { IncidentId = id });
     }
 
@@ -34,7 +42,10 @@ public class IncidentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id)
     {
-        var incident = await _mediator.Send(new GetIncidentByIdQuery(id));
+        var incident = await _queryDispatcher.Dispatch<GetIncidentByIdQuery, IncidentDto>(
+            new GetIncidentByIdQuery(id),
+            HttpContext.RequestAborted);
+
         return Ok(incident);
     }
 
@@ -42,7 +53,10 @@ public class IncidentsController : ControllerBase
     [ProducesResponseType(typeof(PagedResult<IncidentDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var result = await _mediator.Send(new GetAllIncidentsQuery(page, pageSize));
+        var result = await _queryDispatcher.Dispatch<GetAllIncidentsQuery, PagedResult<IncidentDto>>(
+            new GetAllIncidentsQuery(page, pageSize),
+            HttpContext.RequestAborted);
+
         return Ok(result);
     }
 }

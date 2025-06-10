@@ -1,22 +1,23 @@
-﻿using Accidenta.Domain.Entities;
+﻿using Accidenta.Application.Common.Mediator;
+using Accidenta.Application.Contacts.DTO;
+using Accidenta.Application.Exceptions;
 using Accidenta.Domain.Interfaces;
-using MediatR;
 
 namespace Accidenta.Application.Contacts.Queries;
 
-public class GetContactByEmailQuery : IRequest<Contact?>
-{
-    public string Email { get; }
-    public GetContactByEmailQuery(string email) => Email = email;
-}
+public record GetContactByEmailQuery(string email);
 
-public class GetContactByEmailHandler : IRequestHandler<GetContactByEmailQuery, Contact?>
+public class GetContactByEmailQueryHandler : IQueryHandler<GetContactByEmailQuery, ContactDto>
 {
     private readonly IUnitOfWork _unitOfWork;
-    public GetContactByEmailHandler(IUnitOfWork unitOfWork) => _unitOfWork = unitOfWork;
+    public GetContactByEmailQueryHandler(IUnitOfWork unitOfWork) => _unitOfWork = unitOfWork;
 
-    public Task<Contact?> Handle(GetContactByEmailQuery request, CancellationToken cancellationToken)
+    public async Task<ContactDto> Handle(GetContactByEmailQuery request, CancellationToken cancellationToken)
     {
-        return _unitOfWork.Contacts.GetByEmailAsync(request.Email, cancellationToken);
+        var contact = await _unitOfWork.Contacts.GetByEmailAsync(request.email, cancellationToken);
+        if (contact is null)
+            throw new NotFoundException("Contact not found.");
+
+        return new ContactDto(contact);
     }
 }

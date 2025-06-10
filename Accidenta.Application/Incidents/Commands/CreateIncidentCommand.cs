@@ -1,35 +1,31 @@
-﻿using Accidenta.Application.DTO;
+﻿using Accidenta.Application.Common.Mediator;
+using Accidenta.Application.DTO;
 using Accidenta.Application.Exceptions;
 using Accidenta.Domain.Entities;
 using Accidenta.Domain.Interfaces;
 using FluentValidation;
-using MediatR;
 using Serilog;
 
 namespace Accidenta.Application.Incidents.Commands;
 
-public class CreateIncident : IRequest<Guid>
-{
-    public CreateIncidentRequest Request { get; }
-    public CreateIncident(CreateIncidentRequest request) => Request = request;
-}
+public record CreateIncidentCommand(CreateIncidentRequest request);
 
-public class CreateIncidentHandler : IRequestHandler<CreateIncident, Guid>
+public class CreateIncidentCommandHandler : ICommandHandler<CreateIncidentCommand, Guid>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger _logger;
     private readonly IValidator<CreateIncidentRequest> _validator;
 
-    public CreateIncidentHandler(IUnitOfWork unitOfWork, ILogger logger, IValidator<CreateIncidentRequest> validator)
+    public CreateIncidentCommandHandler(IUnitOfWork unitOfWork, ILogger logger, IValidator<CreateIncidentRequest> validator)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _validator = validator;
     }
 
-    public async Task<Guid> Handle(CreateIncident command, CancellationToken ct)
+    public async Task<Guid> Handle(CreateIncidentCommand command, CancellationToken ct)
     {
-        var req = command.Request;
+        var req = command.request;
 
         _logger.Information("Handling CreateIncidentCommand for AccountName: {AccountName}, Email: {Email}", req.AccountName, req.Email);
 
